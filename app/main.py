@@ -1,5 +1,7 @@
 import socket
 import threading
+import time
+from datetime import datetime
 
 keys = {}
 
@@ -19,12 +21,30 @@ def handle_client(client_socket: socket.socket, address: tuple) -> None:
                 message = data[5:].strip()
                 client_socket.send(f"${len(message)}\r\n{message}\r\n".encode())
             elif data.lower().startswith("set"):
-                _, key, value = data.split(" ")
-                keys[key] = value
+                data_arr = data.split(" ")
+                key, value = data_arr[1], data_arr[2]
+                final_value = [value]
+                if "px" in data.lower():
+                    ttl = int(data_arr[4])
+                    curr_time = datetime.now()
+                    final_value.append(curr_time)
+                    final_value.append(ttl)
+                keys[key] = tuple(final_value)
                 client_socket.send("OK\r\n".encode())
             elif data.lower().startswith("get"):
                 _, key = data.split(" ")
-                client_socket.send(f"{keys[key]}\r\n".encode())
+                if len(list(keys[key])) > 1:
+                    curr_time = datetime.now()
+                    recorded_time = keys[key][1]
+                    diff = curr_time - recorded_time
+                    milliseconds_diff = diff.total_seconds() * 1000
+                    ttl = keys[key][2]
+                    if milliseconds_diff >= ttl:
+                        del keys[key]  
+                        client_socket.send("-1\r\n".encode())
+                        return
+                value = keys[key][0]
+                client_socket.send(f"{value}\r\n".encode())
 
 def main():
     print("Server is starting...")
