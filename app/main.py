@@ -1,6 +1,8 @@
 import socket
 import threading
 
+keys = {}
+
 def handle_client(client_socket: socket.socket, address: tuple) -> None:
     with client_socket:
         print(f"Connection from {address} has been established!")
@@ -16,6 +18,13 @@ def handle_client(client_socket: socket.socket, address: tuple) -> None:
             elif data.lower().startswith("echo"):
                 message = data[5:].strip()
                 client_socket.send(f"${len(message)}\r\n{message}\r\n".encode())
+            elif data.lower().startswith("set"):
+                _, key, value = data.split(" ")
+                keys[key] = value
+                client_socket.send("OK\r\n".encode())
+            elif data.lower().startswith("get"):
+                _, key = data.split(" ")
+                client_socket.send(f"{keys[key]}\r\n".encode())
 
 def main():
     print("Server is starting...")
