@@ -8,10 +8,14 @@ def handle_client(client_socket: socket.socket, address: tuple) -> None:
             request: bytes = client_socket.recv(512)
             if not request:
                 break
-            data: str = request.decode()
+            data: str = request.decode().strip()
             print(f"Received: {data} from {address}")
+
             if "ping" in data.lower():
                 client_socket.send(b"+PONG\r\n")
+            elif data.lower().startswith("echo"):
+                message = data[5:].strip()
+                client_socket.send(f"${len(message)}\r\n{message}\r\n".encode())
 
 def main():
     print("Server is starting...")
@@ -19,9 +23,9 @@ def main():
     server_socket.listen()
 
     while True:
-        client_socket, addr = server_socket.accept()  # Accept new client connections
+        client_socket, addr = server_socket.accept()
         client_thread = threading.Thread(target=handle_client, args=[client_socket, addr])
-        client_thread.start()  # Handle each client in a new thread
+        client_thread.start()
 
 if __name__ == "__main__":
     main()
